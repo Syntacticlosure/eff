@@ -15,7 +15,7 @@
 (define abort-cc abort-current-continuation)
 
 ;; Freer Monad
-(struct Pure ([value : Any]))
+(struct (a) Pure ([value : a]))
 
 ;; definitions for reset and shift
 ;; thanks jqww6 for help

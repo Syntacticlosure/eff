@@ -2,13 +2,14 @@
 (require "defs.rkt")
 (require syntax/parse/define (for-syntax racket/syntax))
 
-(provide define-effect)
+(provide define-effect Tagof)
 (define-simple-macro (define-effect effname:id
                        (~seq (operation:id optypes ...) (~literal :) returntypes)
                        ...)
   #:with use-effect (format-id #'effname "use-~a" (syntax-e #'effname))
   #:with effect-handler (format-id #'effname "~a-handler" (syntax-e #'effname))
   #:with handle-effect (format-id #'effname "handle-~a" (syntax-e #'effname))
+  #:with Freer (format-id #'effname "~a-Freer" #'effname)
   #:with (operation? ...) (map (λ (x) (format-id #'effname "~a?" (syntax-e x)))
                                (syntax->list #'(operation ...)))
   #:with ((opargs ...) ...) (map generate-temporaries
@@ -20,44 +21,42 @@
   (begin
     (struct operation ([opargs : optypes] ...)) ...
     (define-type effname (U operation ...))
-    (struct Bind
-      ([effect : operation][k : (-> returntypes Freer)]))
+    (struct (v) Bind
+      ([effect : operation][k : (-> returntypes (Freer v))]))
     ...
     
-    (define-type Freer
-      (U Pure Bind ...))
+    (define-type (Freer v)
+      (U (Pure v) (Bind v) ...))
     
-    (struct (r) Effect-Handler
-      ([val-handler : (-> Any r)]
+    (struct (r v) Effect-Handler
+      ([val-handler : (-> v r)]
        [op-handler : (-> operation (-> (-> returntypes r) r))]
        ...))
-    
-    (define prefab-tag : (Tagof Freer)
-      (make-continuation-prompt-tag 'eff-prefab-tag))
 
-    (: use-effect (case-> (-> operation returntypes) ...))
-    (define (use-effect effect)
+    (: use-effect (All (a) (case-> (-> (Tagof (Freer a)) operation returntypes) ...)))
+    (define (use-effect tag effect)
       (cond [(operation? effect)
              (call/shift
-              (λ ([k : (-> returntypes Freer)])
+              (λ ([k : (-> returntypes (Freer a))])
                 (Bind effect k))
-              prefab-tag)]
+              tag)]
             ...))
-    (: handle-effect (All (r) (-> (-> Any) (Effect-Handler r) r)))
+    (: handle-effect (All (r v) (-> (-> (Tagof (Freer v)) v) (Effect-Handler r v) r)))
     (define (handle-effect body-thunk handler)
       (match-define (Effect-Handler val-handler op-handler ...) handler)
-      (define (run [freer : Freer]) : r
+      (define tag : (Tagof (Freer v)) (make-continuation-prompt-tag))
+      (define (run [freer : (Freer v)]) : r
         (match freer
           [(Pure x) (val-handler x)]
           [(Bind effect k) ((op-handler effect) (compose run k))]
           ...))
-      (run (call/reset (thunk (Pure (body-thunk)))
-                       prefab-tag)))
+      (run (call/reset (thunk (Pure (body-thunk tag)))
+                       tag)))
     (define-simple-macro (effect-handler (~literal :) restype
-                                         [val val-body]
+                                         [val (~literal :) vtype val-body]
                                          [((~literal operation) opargs ...) opk opbody] ...)
       (Effect-Handler
-       (λ ([val : Any]) val-body)
+       (λ ([val : vtype]) val-body)
        (λ ([effect : operation])
          (match effect
            [(operation opargs ...)
