@@ -1,12 +1,9 @@
 #lang typed/racket
-(require typed/racket/unsafe)
-(unsafe-require/typed racket/base
-                      [(values unsafe-cast) (All (a b) (-> a b))])
 
 (provide Tagof TagHandler
          call/prompt call/comp abort-cc
          call/reset call/shift
-         Pure unsafe-cast)
+         Pure)
 
 ;; type defs for prompt tags
 (define-type (TagHandler a) (-> (-> a) a))

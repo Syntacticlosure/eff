@@ -15,17 +15,23 @@
                                  (syntax->list #'((optypes ...) ...)))
   #:with (opbody ...) (generate-temporaries #'(operation ...))
   #:with (opk ...) (generate-temporaries #'(operation ...))
+  #:with (Bind ...) (generate-temporaries #'(operation ...))
+  #:with (op-handler ...) (generate-temporaries #'(operation ...))
   (begin
     (struct operation ([opargs : optypes] ...)) ...
     (define-type effname (U operation ...))
     (struct Bind
-      ([effect : effname][k : (-> (U returntypes ...) Freer)]))
+      ([effect : operation][k : (-> returntypes Freer)]))
+    ...
+    
     (define-type Freer
-      (U Pure Bind))
-    (struct (r) Effect-Handler ([val-handler : (-> Any r)]
-                            [op-handler : (-> effname
-                                              (-> (-> (U returntypes ...)
-                                                          r) r))]))
+      (U Pure Bind ...))
+    
+    (struct (r) Effect-Handler
+      ([val-handler : (-> Any r)]
+       [op-handler : (-> operation (-> (-> returntypes r) r))]
+       ...))
+    
     (define prefab-tag : (Tagof Freer)
       (make-continuation-prompt-tag 'eff-prefab-tag))
 
@@ -34,25 +40,29 @@
       (cond [(operation? effect)
              (call/shift
               (λ ([k : (-> returntypes Freer)])
-                (Bind effect (unsafe-cast k)))
-              prefab-tag)] ...))
+                (Bind effect k))
+              prefab-tag)]
+            ...))
     (: handle-effect (All (r) (-> (-> Any) (Effect-Handler r) r)))
     (define (handle-effect body-thunk handler)
-      (match-define (Effect-Handler val-handler op-handler) handler)
+      (match-define (Effect-Handler val-handler op-handler ...) handler)
       (define (run [freer : Freer]) : r
         (match freer
           [(Pure x) (val-handler x)]
-          [(Bind effect k) ((op-handler effect) (compose run (unsafe-cast k)))]))
+          [(Bind effect k) ((op-handler effect) (compose run k))]
+          ...))
       (run (call/reset (thunk (Pure (body-thunk)))
                        prefab-tag)))
     (define-simple-macro (effect-handler (~literal :) restype
-                          [val val-body]
-                                        [((~literal operation) opargs ...) opk opbody] ...)
-      (Effect-Handler (λ ([val : Any]) val-body)
-                      (λ ([effect : effname])
-                        (match effect
-                          [(operation opargs ...)
-                           (λ ([opk : (-> returntypes restype)])
-                                                  opbody)] ...))))))
+                                         [val val-body]
+                                         [((~literal operation) opargs ...) opk opbody] ...)
+      (Effect-Handler
+       (λ ([val : Any]) val-body)
+       (λ ([effect : operation])
+         (match effect
+           [(operation opargs ...)
+            (λ ([opk : (-> returntypes restype)])
+              opbody)]))
+       ...))))
 
 
