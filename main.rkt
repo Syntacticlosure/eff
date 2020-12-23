@@ -6,7 +6,9 @@
 (define-simple-macro (define-effect effname:id
                        (~seq (operation:id optypes ...) (~literal :) returntypes)
                        ...)
-  #:do [(define formatter (id-formatter #'effname #'effname))]
+  #:do [(define formatter (id-formatter #'effname #'effname))
+        (define (generate-operation-temporaries)
+          (generate-temporaries #'(operation ...)))]
   #:with use-effect (formatter "use-~a")
   #:with effect-handler (formatter "~a-handler")
   #:with handle-effect (formatter "handle-~a")
@@ -15,10 +17,10 @@
                                (syntax->list #'(operation ...)))
   #:with ((opargs ...) ...) (map generate-temporaries
                                  (syntax->list #'((optypes ...) ...)))
-  #:with (opbody ...) (generate-temporaries #'(operation ...))
-  #:with (opk ...) (generate-temporaries #'(operation ...))
-  #:with (Bind ...) (generate-temporaries #'(operation ...))
-  #:with (op-handler ...) (generate-temporaries #'(operation ...))
+  #:with (opbody ...) (generate-operation-temporaries)
+  #:with (opk ...) (generate-operation-temporaries)
+  #:with (Bind ...) (generate-operation-temporaries)
+  #:with (op-handler ...) (generate-operation-temporaries)
   (begin
     (struct operation ([opargs : optypes] ...)) ...
     (define-type effname (U operation ...))
