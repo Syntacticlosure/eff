@@ -1,15 +1,16 @@
 #lang typed/racket
-(require "defs.rkt")
+(require "defs.rkt" (for-syntax "macro-helpers.rkt"))
 (require syntax/parse/define (for-syntax racket/syntax))
 
 (provide define-effect Tagof)
 (define-simple-macro (define-effect effname:id
                        (~seq (operation:id optypes ...) (~literal :) returntypes)
                        ...)
-  #:with use-effect (format-id #'effname "use-~a" (syntax-e #'effname))
-  #:with effect-handler (format-id #'effname "~a-handler" (syntax-e #'effname))
-  #:with handle-effect (format-id #'effname "handle-~a" (syntax-e #'effname))
-  #:with Freer (format-id #'effname "~a-Freer" #'effname)
+  #:do [(define formatter (id-formatter #'effname #'effname))]
+  #:with use-effect (formatter "use-~a")
+  #:with effect-handler (formatter "~a-handler")
+  #:with handle-effect (formatter "handle-~a")
+  #:with Freer (formatter "~a-Freer")
   #:with (operation? ...) (map (λ (x) (format-id #'effname "~a?" (syntax-e x)))
                                (syntax->list #'(operation ...)))
   #:with ((opargs ...) ...) (map generate-temporaries
