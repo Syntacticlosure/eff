@@ -1,10 +1,18 @@
 # eff
-A library provides extensible effects in typed racket.
+A Library Provides Extensible Effects in Typed Racket.
 
 ## Progress
-This project is still in experimental.
+This project is still in experimental and not ready for production use.
 
-Need more facilities to remove some Anys.
+Todos:
+
+- Need polymorphic effects and effect handlers.
+
+- Need some auxiliary macros.
+
+- Need untyped version.
+
+- Need documents.
 
 ## Usage
-see tests.
+See tests.
