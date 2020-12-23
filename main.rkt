@@ -16,7 +16,7 @@
   #:with (opbody ...) (generate-temporaries #'(operation ...))
   #:with (opk ...) (generate-temporaries #'(operation ...))
   (begin
-    (struct operation ([arg : optypes] ...)) ...
+    (struct operation ([opargs : optypes] ...)) ...
     (define-type effname (U operation ...))
     (struct Bind
       ([effect : effname][k : (-> (U returntypes ...) Freer)]))
