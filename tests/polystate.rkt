@@ -3,9 +3,9 @@
 (require typed/rackunit)
 
 ;; polymorphic effects
-(define-effect (State ta)
-  (get) : ta
-  (set-state ta) : Void)
+(define-effect (State a)
+  (get) : a
+  (set-state a) : Void)
 
 (define #:∀ (a) (add1 [tag : (Tagof (State-Freer a Integer))])
   (define x (use-State tag (get)))

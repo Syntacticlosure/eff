@@ -6,7 +6,7 @@ This project is still in experimental and not ready for production use.
 
 Todos:
 
-- Need polymorphic effects and effect handlers.
+- Need polymorphic effects (finished) and polymorphic effect handlers.
 
 - Need some auxiliary macros.
 
@@ -16,3 +16,6 @@ Todos:
 
 ## Usage
 See tests.
+
+## What is `Extensible Effects`?
+See [eff lang](https://www.eff-lang.org/).
