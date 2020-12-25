@@ -32,13 +32,13 @@
     (struct (effpolyvars ...) operation ([opargs : optypes] ...)) ...
     (define-type (~typeapp effname effpolyvars ...)
       (U (~typeapp operation effpolyvars ...) ...))
-    (struct (v effpolyvars ...) Bind
+    (struct (effpolyvars ...) Bind
       ([effect : (~typeapp operation effpolyvars ...)]
-       [k : (-> returntypes (Freer v effpolyvars ...))]))
+       [k : (-> returntypes (~typeapp Freer effpolyvars ...))]))
     ...
     
-    (define-type (Freer v effpolyvars ...)
-      (U (Pure v) (Bind v effpolyvars ...) ...))
+    (define-type (~typeapp Freer effpolyvars ...)
+      (U Pure (~typeapp Bind effpolyvars ...) ...))
     
     (struct (r v effpolyvars ...) Effect-Handler
       ([val-handler : (-> v r)]
@@ -46,29 +46,33 @@
                           (-> (-> returntypes r) r))]
        ...))
 
-    (: use-effect (All (a effpolyvars ...)
-                       (case-> (-> (Tagof (Freer a effpolyvars ...))
+    (: use-effect (All (effpolyvars ...)
+                       (case-> (-> (Tagof (~typeapp Freer effpolyvars ...))
                                    (~typeapp operation effpolyvars ...) returntypes)
                                ...)))
     (define (use-effect tag effect)
       (cond [(operation? effect)
              (call/shift
-              (λ ([k : (-> returntypes (Freer a effpolyvars ...))])
+              (λ ([k : (-> returntypes (~typeapp Freer effpolyvars ...))])
                 (Bind effect k))
               tag)]
             ...))
     (: handle-effect (All (r v effpolyvars ...)
-                          (-> (-> (Tagof (Freer v effpolyvars ...)) v)
+                          (-> (-> (Tagof (~typeapp Freer effpolyvars ...)) v)
                               (Effect-Handler r v effpolyvars ...) r)))
     (define (handle-effect body-thunk handler)
       (match-define (Effect-Handler val-handler op-handler ...) handler)
-      (define tag : (Tagof (Freer v effpolyvars ...)) (make-continuation-prompt-tag))
-      (define (run [freer : (Freer v effpolyvars ...)]) : r
+      (define tag : (Tagof (~typeapp Freer effpolyvars ...))
+        (make-continuation-prompt-tag))
+      (define result : (Option (Some v)) #f)
+      (define (run [freer : (~typeapp Freer effpolyvars ...)]) : r
         (match freer
-          [(Pure x) (val-handler x)]
+          [(Pure) (match result
+                  [(Some x) (val-handler x)])]
           [(Bind effect k) ((op-handler effect) (compose run k))]
           ...))
-      (run (call/reset (thunk (Pure (body-thunk tag)))
+      (run (call/reset (thunk (set! result (Some (body-thunk tag)))
+                              (Pure))
                        tag)))
     (define-simple-macro (effect-handler (~optional (_initpolytypes (... ...)))
                                          (~literal :) restype

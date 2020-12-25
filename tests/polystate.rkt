@@ -7,16 +7,16 @@
   (get) : a
   (set-state a) : Void)
 
-(define #:∀ (a) (add1 [tag : (Tagof (State-Freer a Integer))])
+(define (add1 [tag : (Tagof (State-Freer Integer))])
   (define x (use-State tag (get)))
   (use-State tag (set-state (+ x 1)))
   x)
 
-(define #:∀ (a) (2times [tag : (Tagof (State-Freer a Integer))])
+(define (2times [tag : (Tagof (State-Freer Integer))])
   (define x (use-State tag (get)))
   (use-State tag (set-state (* 2 x))))
 
-(define #:∀ (a) (wrap [tag : (Tagof (State-Freer a String))])
+(define (wrap [tag : (Tagof (State-Freer String))])
   (define x (use-State tag (get)))
   (use-State tag (set-state (string-append "(" x ")"))))
 
@@ -33,11 +33,11 @@
                  [(set-state _s) k (lambda ([s : String]) ((k (void)) _s))]))
 
 
-(define a (handle-State (λ ([tag : (Tagof (State-Freer Integer Integer))])
+(define a (handle-State (λ ([tag : (Tagof (State-Freer Integer))])
                           (add1 tag) (add1 tag)) ret-and-state))
-(define b (handle-State (λ ([tag : (Tagof (State-Freer Integer Integer))])
+(define b (handle-State (λ ([tag : (Tagof (State-Freer Integer))])
                           (2times tag) (add1 tag)) ret-and-state))
-(define c (handle-State (λ ([tag : (Tagof (State-Freer Void String))])
+(define c (handle-State (λ ([tag : (Tagof (State-Freer String))])
                           (wrap tag)) state-string))
 (module+ test
   (check-equal? (a 3) '(4 . 5))
