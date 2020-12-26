@@ -1,6 +1,6 @@
 #lang typed/racket
 (require "defs.rkt" (for-syntax "macro-helpers.rkt"))
-(require syntax/parse/define (for-syntax racket/syntax))
+(require syntax/parse/define (for-syntax racket/syntax racket/sequence))
 
 (provide define-effect Tagof effect-handler)
 (define-simple-macro (define-effect (~or (effname:id _effpolyvars:id ...)
@@ -111,7 +111,9 @@
                    (length (syntax->list #'(effpolyvars ...))))
           (raise-syntax-error 'effpolyvars-check
                               "wrong number of types to instantiate an effect"
-                              #'(effname _initpolytypes ...)))]
+                              #'(effname _initpolytypes ...)))
+        (for ([id (in-syntax #'(effname _operation ...))])
+          (syntax-parse-state-cons! 'literals id))]
   
   (λ #:forall (handlerpolyvars ...)
     ([tag : (Tagof (~typeapp Freer initpolytypes ...))]

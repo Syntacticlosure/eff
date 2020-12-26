@@ -31,7 +31,7 @@
   (traverse stx))
 
 (define ((id-formatter lctx ident) fs)
-  (format-id lctx fs ident))
+  (format-id lctx fs ident #:subs? #t))
 
 (define (hash-syntax . args)
   (define (iter args)
