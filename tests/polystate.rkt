@@ -21,17 +21,19 @@
   (define x (use-State string-tag (get)))
   (use-State string-tag (set-state (string-append "(" x ")"))))
 
-(define-effect-handler #:forall (a)
-  ([ret-and-state : (State Integer)] a) : (-> Integer (Pairof a Integer))
-  [val (lambda ([s : Integer]) (cons val s))]
-  [(get) k (lambda ([s : Integer]) ((k s) s))]
-  [(set-state _s) k (lambda ([s : Integer]) ((k (void)) _s))])
+(define ret-and-state
+  (effect-handler
+   #:forall (a b) (State a) : (-> a (Pairof b a))
+   [val : b (lambda ([s : a]) (cons val s))]
+   [(get) k (lambda ([s : a]) ((k s) s))]
+   [(set-state _s) k (lambda ([s : a]) ((k (void)) _s))]))
 
-(define-effect-handler ([state-string : (State String)] Void)
-  : (-> String String)
-  [val (lambda ([s : String]) s)]
-  [(get) k (lambda ([s : String]) ((k s) s))]
-  [(set-state _s) k (lambda ([s : String]) ((k (void)) _s))])
+(define state-string
+  (effect-handler
+   (State String) : (-> String String)
+   [val : Void (lambda ([s : String]) s)]
+   [(get) k (lambda ([s : String]) ((k s) s))]
+   [(set-state _s) k (lambda ([s : String]) ((k (void)) _s))]))
 
 
 (define a (ret-and-state tag (thunk

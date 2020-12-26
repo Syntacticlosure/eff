@@ -14,11 +14,12 @@
   (define a (use-State tag (get)))
   (use-State tag (set-state (* a 2))))
 
-(define-effect-handler [(ret-and-state : State) Integer]
-  : (-> Integer (Pairof Integer Integer))
-  [val (lambda ([s : Integer]) (cons val s))]
-  [(get) k (lambda ([s : Integer]) ((k s) s))]
-  [(set-state _s) k (lambda ([s : Integer]) ((k (void)) _s))])
+(define ret-and-state
+  (effect-handler
+   State : (-> Integer (Pairof Integer Integer))
+   [val : Integer (lambda ([s : Integer]) (cons val s))]
+   [(get) k (lambda ([s : Integer]) ((k s) s))]
+   [(set-state _s) k (lambda ([s : Integer]) ((k (void)) _s))]))
 
 (define a (ret-and-state tag (thunk (add1) (add1))))
 (define b (ret-and-state tag (thunk (2times) (add1))))
