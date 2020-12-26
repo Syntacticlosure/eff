@@ -3,7 +3,7 @@
 (provide Tagof TagHandler
          call/prompt call/comp abort-cc
          call/reset call/shift
-         Pure Some)
+         Pure Some-Val)
 
 ;; type defs for prompt tags
 (define-type (TagHandler a) (-> (-> a) a))
@@ -14,7 +14,7 @@
 (define call/comp call-with-composable-continuation)
 (define abort-cc abort-current-continuation)
 
-(struct (v) Some ([val : v]))
+(struct (v) Some-Val ([val : v]))
 ;; Freer Monad
 (struct Pure ())
 

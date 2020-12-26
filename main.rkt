@@ -2,7 +2,7 @@
 (require "defs.rkt" (for-syntax "macro-helpers.rkt"))
 (require syntax/parse/define (for-syntax racket/syntax))
 
-(provide define-effect Tagof)
+(provide define-effect Tagof define-effect-handler)
 (define-simple-macro (define-effect (~or (effname:id _effpolyvars:id ...)
                                          effname:id)
                        (~seq (operation:id _optypes ...) (~literal :) _returntypes)
@@ -13,39 +13,44 @@
   #:with (_i_effpolyvars ...) #'(~? (_effpolyvars ...) ())
   #:with (effpolyvars  ...) (generate-temporaries #'(_i_effpolyvars ...))
   #:with (returntypes ...) (replace-ids #'([_i_effpolyvars effpolyvars] ...)
-                                     #'(_returntypes ...))
+                                        #'(_returntypes ...))
   #:with ((optypes ...) ...) (replace-ids #'([_i_effpolyvars effpolyvars] ...)
-                                     #'((_optypes ...) ...))
+                                          #'((_optypes ...) ...))
   #:with use-effect (formatter "use-~a")
-  #:with effect-handler (formatter "~a-handler")
   #:with handle-effect (formatter "handle-~a")
   #:with Freer (formatter "~a-Freer")
+  #:with Effect-Tag (formatter "~a-Tag")
+  #:with make-effect-tag (formatter "make-~a-tag")
   #:with (operation? ...) (map (λ (x) (format-id #'effname "~a?" (syntax-e x)))
                                (syntax->list #'(operation ...)))
   #:with ((opargs ...) ...) (map generate-temporaries
                                  (syntax->list #'((optypes ...) ...)))
-  #:with (opbody ...) (generate-operation-temporaries)
-  #:with (opk ...) (generate-operation-temporaries)
   #:with (Bind ...) (generate-operation-temporaries)
   #:with (op-handler ...) (generate-operation-temporaries)
+  #:with macro-env (hash-syntax 'effpolyvars #'(effpolyvars ...)
+                                'returntypes #'(returntypes ...)
+                                'optypes #'((optypes ...) ...)
+                                'use-effect #'use-effect
+                                'handle-effect #'handle-effect
+                                'Freer #'Freer
+                                'make-effect-tag #'make-effect-tag
+                                'operation #'(operation ...)
+                                'Bind #'(Bind ...))
   (begin
+    (define-syntax effname macro-env)
     (struct (effpolyvars ...) operation ([opargs : optypes] ...)) ...
-    (define-type (~typeapp effname effpolyvars ...)
-      (U (~typeapp operation effpolyvars ...) ...))
     (struct (effpolyvars ...) Bind
       ([effect : (~typeapp operation effpolyvars ...)]
        [k : (-> returntypes (~typeapp Freer effpolyvars ...))]))
     ...
-    
     (define-type (~typeapp Freer effpolyvars ...)
       (U Pure (~typeapp Bind effpolyvars ...) ...))
+    (define-type (~typeapp Effect-Tag effpolyvars ...)
+      (Tagof (~typeapp Freer effpolyvars ...)))
+    (define-syntax-rule (make-effect-tag effpolyvars ...)
+      (ann (make-continuation-prompt-tag)
+           (~typeapp Effect-Tag effpolyvars ...)))
     
-    (struct (r v effpolyvars ...) Effect-Handler
-      ([val-handler : (-> v r)]
-       [op-handler :  (-> (~typeapp operation effpolyvars ...)
-                          (-> (-> returntypes r) r))]
-       ...))
-
     (: use-effect (All (effpolyvars ...)
                        (case-> (-> (Tagof (~typeapp Freer effpolyvars ...))
                                    (~typeapp operation effpolyvars ...) returntypes)
@@ -58,36 +63,68 @@
               tag)]
             ...))
     (: handle-effect (All (r v effpolyvars ...)
-                          (-> (-> (Tagof (~typeapp Freer effpolyvars ...)) v)
-                              (Effect-Handler r v effpolyvars ...) r)))
-    (define (handle-effect body-thunk handler)
-      (match-define (Effect-Handler val-handler op-handler ...) handler)
-      (define tag : (Tagof (~typeapp Freer effpolyvars ...))
-        (make-continuation-prompt-tag))
-      (define result : (Option (Some v)) #f)
+                          (-> (Tagof (~typeapp Freer effpolyvars ...)) (-> v)
+                              (-> v r) ;; val handler
+                              (-> (~typeapp operation effpolyvars ...)
+                                  (-> returntypes r) r) ...  ;;ophandlers
+                                                        r)))
+    (define (handle-effect tag body-thunk val-handler op-handler ...)
+      (define result : (Option (Some-Val v)) #f)
       (define (run [freer : (~typeapp Freer effpolyvars ...)]) : r
         (match freer
           [(Pure) (match result
-                  [(Some x) (val-handler x)])]
-          [(Bind effect k) ((op-handler effect) (compose run k))]
+                    [(Some-Val x) (val-handler x)])]
+          [(Bind effect k) (op-handler effect (compose run k))]
           ...))
-      (run (call/reset (thunk (set! result (Some (body-thunk tag)))
+      (run (call/reset (thunk (set! result (Some-Val (body-thunk)))
                               (Pure))
-                       tag)))
-    (define-simple-macro (effect-handler (~optional (_initpolytypes (... ...)))
-                                         (~literal :) restype
-                                         [val (~literal :) vtype val-body]
-                                         [((~literal operation) opargs ...) opk opbody] ...)
-      #:with (__effpolyvars (... ...)) #'(effpolyvars ...)
-      #:with (initpolytypes (... ...)) #'((... ~?) (_initpolytypes (... ...))
-                                                        ())
-      (let ()
-        (define-type __effpolyvars initpolytypes) (... ...)
-      (Effect-Handler
-       (λ ([val : vtype]) val-body)
-       (λ ([effect : (~typeapp operation effpolyvars ...)])
-         (match effect
-           [(operation opargs ...)
-            (λ ([opk : (-> returntypes restype)])
-              opbody)]))
-       ...)))))
+                       tag)))))
+
+(define-simple-macro (define-effect-handler (~optional (~seq #:forall
+                                                             (_handlerpolyvars:id ...)))
+                       ([hname (~literal :)
+                               (~or (effname:id _initpolytypes ...) effname:id)]
+                        vtype)
+                       (~literal :) restype
+                       [val val-body]
+                       [(_operation:id opargs ...) opk opbody] ...)
+  #:do [(define macro-env (syntax-local-value #'effname))
+        (unless (hash? macro-env)
+          (raise-syntax-error 'effect-existence-check
+                              (format "~a is not a defined effect." (syntax-e #'effname))))]
+  #:with Freer (hash-ref macro-env 'Freer)
+  #:with (operation ...) (hash-ref macro-env 'operation)
+  #:with (returntypes ...) (hash-ref macro-env 'returntypes)
+  #:with (effpolyvars ...) (hash-ref macro-env 'effpolyvars)
+  #:with handle-effect (hash-ref macro-env 'handle-effect)
+  #:with (initpolytypes ...) #'(~? (_initpolytypes ...)
+                                   ())
+  #:with (handlerpolyvars ...) #'(~? (_handlerpolyvars ...)
+                                     ())
+  #:do [(for-each
+         (λ (o _o)
+           (unless (free-identifier=? o _o)
+             (raise-syntax-error 'operation-check
+                                 (format "expect an operation ~a, but got ~a"
+                                         (syntax-e o) (syntax-e _o)) _o)))
+         (syntax->list #'(operation ...))
+         (syntax->list #'(_operation ...)))
+        (unless (= (length (syntax->list #'(initpolytypes ...)))
+                   (length (syntax->list #'(effpolyvars ...))))
+          (raise-syntax-error 'effpolyvars-check
+                              "wrong number of types to instantiate an effect"
+                              #'(effname _initpolytypes ...)))]
+  
+  (define #:forall (handlerpolyvars ...)
+    (hname [tag : (Tagof (~typeapp Freer initpolytypes ...))]
+           [body-thunk : (-> vtype)]) : restype
+    (define-type effpolyvars initpolytypes) ...
+    (handle-effect tag body-thunk
+                   (λ ([val : vtype]) val-body)
+                   (λ ([effect : (~typeapp operation initpolytypes ...)]
+                       [opk : (-> returntypes restype)])
+                     (match effect
+                       [(operation opargs ...)
+                        opbody]))
+                   ...)))
+

@@ -6,7 +6,7 @@ This project is still in experimental and not ready for production use.
 
 Todos:
 
-- Need polymorphic effects (finished) and polymorphic effect handlers.
+- Need polymorphic effects (finished) and polymorphic effect handlers (finsihed).
 
 - Need some auxiliary macros.
 
