@@ -2,7 +2,7 @@
 (require "defs.rkt" (for-syntax "macro-helpers.rkt"))
 (require syntax/parse/define (for-syntax racket/syntax))
 
-(provide define-effect Tagof define-effect-handler)
+(provide define-effect Tagof effect-handler)
 (define-simple-macro (define-effect (~or (effname:id _effpolyvars:id ...)
                                          effname:id)
                        (~seq (operation:id _optypes ...) (~literal :) _returntypes)
@@ -80,14 +80,12 @@
                               (Pure))
                        tag)))))
 
-(define-simple-macro (define-effect-handler (~optional (~seq #:forall
+(define-simple-macro (effect-handler (~optional (~seq #:forall
                                                              (_handlerpolyvars:id ...)))
-                       ([hname (~literal :)
-                               (~or (effname:id _initpolytypes ...) effname:id)]
-                        vtype)
-                       (~literal :) restype
-                       [val val-body]
-                       [(_operation:id opargs ...) opk opbody] ...)
+                                     (~or (effname:id _initpolytypes ...) effname:id)
+                                     (~literal :) restype
+                                     [val (~literal :) vtype val-body]
+                                     [(_operation:id opargs ...) opk opbody] ...)
   #:do [(define macro-env (syntax-local-value #'effname))
         (unless (hash? macro-env)
           (raise-syntax-error 'effect-existence-check
@@ -115,9 +113,9 @@
                               "wrong number of types to instantiate an effect"
                               #'(effname _initpolytypes ...)))]
   
-  (define #:forall (handlerpolyvars ...)
-    (hname [tag : (Tagof (~typeapp Freer initpolytypes ...))]
-           [body-thunk : (-> vtype)]) : restype
+  (λ #:forall (handlerpolyvars ...)
+    ([tag : (Tagof (~typeapp Freer initpolytypes ...))]
+     [body-thunk : (-> vtype)]) : restype
     (define-type effpolyvars initpolytypes) ...
     (handle-effect tag body-thunk
                    (λ ([val : vtype]) val-body)

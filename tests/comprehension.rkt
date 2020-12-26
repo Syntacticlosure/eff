@@ -12,21 +12,21 @@
   (+ n1 n2))
 
 
-(define-effect-handler #:forall (a b) ([comp/list : (Comprehension a)] b)
-  : (Listof b)
-  [v  (list v)]
-  [(in-list l) k (apply append (map k l))]
-  [(in-vector v) k (apply append (map k (vector->list v)))]
-  [(guard b) k (if b (k (void)) '())])
+(define comp/list
+  (effect-handler
+   #:forall (a b) (Comprehension a) : (Listof b)
+   [v : b (list v)]
+   [(in-list l) k (apply append (map k l))]
+   [(in-vector v) k (apply append (map k (vector->list v)))]
+   [(guard b) k (if b (k (void)) '())]))
 
-(define-effect-handler ([comp/max : (Comprehension Integer)] Integer)
-  : Integer
-  [v v]
-  [(in-list l) k
-               (apply max (map k l))]
-  [(in-vector v) k
-                 (apply max (map k (vector->list v)))]
-  [(guard b) k (if b (k (void)) -999999)])
+(define comp/max
+  (effect-handler
+   (Comprehension Integer) : Integer
+   [v : Integer v]
+   [(in-list l) k (apply max (map k l))]
+   [(in-vector v) k (apply max (map k (vector->list v)))]
+   [(guard b) k (if b (k (void)) -999999)]))
 
                     
 (module+ test
