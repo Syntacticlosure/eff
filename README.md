@@ -1,15 +1,15 @@
 # eff
 A Library Provides Extensible Effects in Typed Racket.
 
+The typed version has several limitations due to the design of Typed Racket.
+
+We did't use any Any and unsafe operations in the code.
 ## Progress
-This project is still in experimental and not ready for production use.
+APIs of typed version may not change in future versions.
 
 Roadmaps:
 
-- Need polymorphic effects (finished), polymorphic effect handlers (finsihed),
-  and polymorphic operations.
-
-- Need some auxiliary macros (in progress).
+- Need some auxiliary macros (work in progress).
 
 - Need untyped version.
 
