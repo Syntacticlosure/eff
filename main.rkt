@@ -5,15 +5,23 @@
 (provide define-effect Tagof effect-handler)
 (define-simple-macro (define-effect (~or (effname:id _effpolyvars ...)
                                          effname:id)
-                       (~seq (operation:id _optypes ...) (~literal :) _returntypes)
+                       (~seq (~optional
+                              (~seq (~or #:forall #:∀) _oppolyvars)
+                              #:defaults ([_oppolyvars #'()]))
+                                    (operation:id _optypes ...)
+                                    (~literal :) _returntypes)
                        ...)
   #:do [(define formatter (id-formatter #'effname #'effname))
         (define (generate-operation-temporaries)
           (generate-temporaries #'(operation ...)))]
   #:with (replace-tb effpolyvars  ...) (check-type-vars (attribute _effpolyvars))
-  #:with (returntypes ...) (replace-ids #'replace-tb
+  #:with ((replace-op-tbs oppolyvars ...) ...) (map check-type-vars
+                                                    (syntax->list #'(_oppolyvars ...)))
+  #:with meraged-op-tbs #'((~@ . replace-op-tbs) ...)
+                 
+  #:with (returntypes ...) (replace-ids #'((~@ . replace-tb) (~@ . meraged-op-tbs))
                                         #'(_returntypes ...))
-  #:with ((optypes ...) ...) (replace-ids #'replace-tb
+  #:with ((optypes ...) ...) (replace-ids #'((~@ . replace-tb) (~@ . meraged-op-tbs))
                                           #'((_optypes ...) ...))
   #:with use-effect (formatter "use-~a")
   #:with handle-effect (formatter "handle-~a")
@@ -34,7 +42,8 @@
                                 'Freer #'Freer
                                 'make-effect-tag #'make-effect-tag
                                 'operation #'(operation ...)
-                                'Bind #'(Bind ...))
+                                'Bind #'(Bind ...)
+                                'oppolyvars #'((oppolyvars ...) ...))
   (begin
     (define-syntax effname macro-env)
     (struct (effpolyvars ...) operation ([opargs : optypes] ...)) ...

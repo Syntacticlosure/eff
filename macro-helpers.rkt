@@ -51,8 +51,9 @@
                                       i))) slist))
   (if stx
       (let ()
-        (all-identifiers (syntax->list stx))
+        (define slist (if (list? stx) stx (syntax->list stx)))
+        (all-identifiers slist)
         (with-syntax* ([(vars ...) stx]
-                      [(gvars ...) (generate-temporaries stx)])
+                       [(gvars ...) (generate-temporaries stx)])
           #'(([vars gvars] ...) gvars ...)))
       #'(())))
