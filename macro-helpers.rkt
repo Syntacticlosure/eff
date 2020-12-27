@@ -5,7 +5,7 @@
          syntax/id-table
          (for-syntax syntax/parse))
 
-(provide ~typeapp id-formatter replace-ids hash-syntax)
+(provide ~typeapp id-formatter replace-ids hash-syntax check-type-vars)
 
 (define-template-metafunction (~typeapp stx)
   (syntax-parse stx
@@ -41,4 +41,18 @@
       [_ #`()]))
   #`(hash #,@(iter args)))
 
-
+(define (check-type-vars stx)
+  (define (all-identifiers slist)
+    (for-each (λ (i)
+                (unless (identifier? i)
+                  (raise-syntax-error 'identifier-check
+                                      (format "expect an identifier,not a ~a"
+                                              i)
+                                      i))) slist))
+  (if stx
+      (let ()
+        (all-identifiers (syntax->list stx))
+        (with-syntax* ([(vars ...) stx]
+                      [(gvars ...) (generate-temporaries stx)])
+          #'(([vars gvars] ...) gvars ...)))
+      #'(())))

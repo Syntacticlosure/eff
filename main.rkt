@@ -3,18 +3,17 @@
 (require syntax/parse/define (for-syntax racket/syntax racket/sequence))
 
 (provide define-effect Tagof effect-handler)
-(define-simple-macro (define-effect (~or (effname:id _effpolyvars:id ...)
+(define-simple-macro (define-effect (~or (effname:id _effpolyvars ...)
                                          effname:id)
                        (~seq (operation:id _optypes ...) (~literal :) _returntypes)
                        ...)
   #:do [(define formatter (id-formatter #'effname #'effname))
         (define (generate-operation-temporaries)
           (generate-temporaries #'(operation ...)))]
-  #:with (_i_effpolyvars ...) #'(~? (_effpolyvars ...) ())
-  #:with (effpolyvars  ...) (generate-temporaries #'(_i_effpolyvars ...))
-  #:with (returntypes ...) (replace-ids #'([_i_effpolyvars effpolyvars] ...)
+  #:with (replace-tb effpolyvars  ...) (check-type-vars (attribute _effpolyvars))
+  #:with (returntypes ...) (replace-ids #'replace-tb
                                         #'(_returntypes ...))
-  #:with ((optypes ...) ...) (replace-ids #'([_i_effpolyvars effpolyvars] ...)
+  #:with ((optypes ...) ...) (replace-ids #'replace-tb
                                           #'((_optypes ...) ...))
   #:with use-effect (formatter "use-~a")
   #:with handle-effect (formatter "handle-~a")
@@ -80,7 +79,9 @@
                               (Pure))
                        tag)))))
 
-(define-simple-macro (effect-handler (~optional (~seq #:forall
+
+
+(define-simple-macro (effect-handler (~optional (~seq (~or #:∀ #:forall)
                                                              (_handlerpolyvars:id ...)))
                                      (~or (effname:id _initpolytypes ...) effname:id)
                                      (~literal :) restype
