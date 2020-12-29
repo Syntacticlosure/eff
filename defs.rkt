@@ -1,22 +1,17 @@
 #lang typed/racket
 
-(provide Tagof TagHandler
+(provide Tagof
          call/prompt call/comp abort-cc
-         call/reset call/shift
-         Pure Some-Val)
+         call/reset call/shift)
 
 ;; type defs for prompt tags
-(define-type (TagHandler a) (-> (-> a) a))
-(define-type (Tagof a) (Prompt-Tagof a (TagHandler a)))
+(define-type (Tagof a) (Prompt-Tagof a (-> (-> a) a)))
 
 ;; abrevs
 (define call/prompt call-with-continuation-prompt)
 (define call/comp call-with-composable-continuation)
 (define abort-cc abort-current-continuation)
 
-(struct (v) Some-Val ([val : v]))
-;; Freer Monad
-(struct Pure ())
 
 ;; definitions for reset and shift
 ;; thanks jqww6 for help
@@ -36,5 +31,4 @@
                                                tag))))))
              tag))
 
-(define test-tag : (Tagof Integer) (make-continuation-prompt-tag))
 
