@@ -7,16 +7,8 @@ We did't use any Any and unsafe operations in the code.
 ## Progress
 We are redesigning this library to let it more efficient and simpler for typed racket(in `dev` branch).
 
-APIs of typed version may not change in future versions.
-
-Roadmaps:
-
-- Need some auxiliary macros (work in progress).
-
-- Need untyped version.
-
-- Need documents.
-
+The old version stem from the design of extensible effects in ocaml (the paper [Eff Directly in OCaml](https://arxiv.org/pdf/1812.11664.pdf)), but it doesn't work
+well with typed racket.
 
 ## Usage
 See tests.
