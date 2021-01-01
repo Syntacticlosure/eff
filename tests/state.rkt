@@ -1,29 +1,45 @@
-#lang typed/racket
-(require "../main.rkt")
-(require typed/rackunit)
-(define-effect State
-  (get) : Integer
-  (set-state Integer) : Void)
-(define tag (make-State-tag))
-(define (add1)
-  (define a (use-State tag (get)))
-  (use-State tag (set-state (+ a 1)))
-  a)
+#lang racket
+(require "../main.rkt" rackunit)
+(define-value-effect use-state)
+;;react hooks style stateful functions
+(define (handle-state f)
+  (define index 0)
+  (define states '())
+  (λ args
+    (with-effect/value
+        ([use-state (λ (init)
+                      (if (>= index (length states))
+                          (let ([b (box init)])
+                            (set! states (cons b states))
+                            (set! index (add1 index))
+                            (cons init (λ (v) (set-box! b v))))
+                          (let ([b (list-ref states (- (length states) 1 index))])
+                            (set! index (add1 index))
+                            (cons (unbox b) (λ (v) (set-box! b v))))))])
+      (set! index 0)
+      (apply f args))))
 
-(define (2times)
-  (define a (use-State tag (get)))
-  (use-State tag (set-state (* a 2))))
+(define counter
+  (handle-state (thunk
+                 (match-define (cons x set-x) (use-state 0))
+                 (set-x (add1 x))
+                 x)))
 
-(define ret-and-state
-  (effect-handler
-   State : (-> Integer (Pairof Integer Integer))
-   [val : Integer (lambda ([s : Integer]) (cons val s))]
-   [(get) k (lambda ([s : Integer]) ((k s) s))]
-   [(set-state _s) k (lambda ([s : Integer]) ((k (void)) _s))]))
-
-(define a (ret-and-state tag (thunk (add1) (add1))))
-(define b (ret-and-state tag (thunk (2times) (add1))))
+(define counter1
+  (handle-state (thunk
+                 (match-define (cons x set-x) (use-state 0))
+                 (match-define (cons y set-y) (use-state 1))
+                 (set-x (add1 x))
+                 (set-y (* y 2))
+                 (cons x y))))
 
 (module+ test
-  (check-equal? (a 3) '(4 . 5))
-  (check-equal? (b 3) '(6 . 7)))
+  (check-equal? (counter) 0)
+  (check-equal? (counter) 1)
+  (check-equal? (counter) 2)
+
+  (check-equal? (counter1) (cons 0 1))
+  (check-equal? (counter1) (cons 1 2))
+  (check-equal? (counter1) (cons 2 4)))
+
+   
