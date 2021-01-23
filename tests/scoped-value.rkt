@@ -19,9 +19,8 @@
 (define (run code)
   (with-effect/value
       ([log (λ (x) (printf "os level log : ~a\n" x))]
-      [log (λ (x) (printf "library level log : ~a\n" x))]
-      [log (λ (x) (printf "user level log: ~a\n" x))])
+       [log (λ (x) (printf "library level log : ~a\n" x))]
+       [log (λ (x) (printf "user level log: ~a\n" x))])
     (code)))
-    
+
        
-  

@@ -37,9 +37,8 @@
                    (iter #'(with-effect/control ([val valbody] rest ...)
                              bodies ...)))]
       [(_ ([val valbody]) bodies ...)
-       #'(reset-at tag 
-                   (let ([val (let () bodies ...)])
-                     valbody))]))
+       #'(let ([val (let () bodies ...)])
+                     valbody)]))
   #`(let ([tag (make-continuation-prompt-tag)])
-      #,(iter stx)))
+      (reset-at tag #,(iter stx))))
 
