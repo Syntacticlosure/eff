@@ -1,7 +1,7 @@
 # eff
 A Library Provides Extensible Effects in Typed Racket.
 
-The typed version has several limitations due to the design of Typed Racket,so we rewrite it in untyped racket and get a more simple and efficient design.
+The typed version has several limitations due to the design of Typed Racket,so we rewrite it in untyped racket and get a simpler and more efficient design.
 
 We did't use any Any and unsafe operations in the code.
 
