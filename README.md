@@ -1,5 +1,5 @@
 # eff
-A Library Provides Extensible Effects in Typed Racket.
+A Library Provides Extensible Effects in Racket.
 
 The typed version has several limitations due to the design of Typed Racket,so we rewrite it in untyped racket and get a simpler and more efficient design.
 
